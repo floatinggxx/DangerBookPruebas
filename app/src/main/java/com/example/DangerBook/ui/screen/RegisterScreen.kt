@@ -51,7 +51,6 @@ fun RegisterScreenVm(
         onPhoneChange = vm::onPhoneChange,
         onPassChange = vm::onRegisterPassChange,
         onConfirmChange = vm::onConfirmChange,
-        onRoleChange = vm::onRoleChange, // NUEVO
         onSubmit = vm::submitRegister,
         onGoLogin = onGoLogin
     )
@@ -80,7 +79,9 @@ private fun RegisterScreen(
     onPassChange: (String) -> Unit,                          // Handler password
     onConfirmChange: (String) -> Unit,                       // Handler confirmación
     onSubmit: () -> Unit,                                    // Acción Registrar
-    onGoLogin: () -> Unit                                    // Ir a Login
+    onGoLogin: () -> Unit,
+    allowRoleSelection: Boolean,
+    role: String
 ) {
     val bg = MaterialTheme.colorScheme.tertiaryContainer // Fondo único
     //4 Anexamos las variables para mostrar y ocultar el password

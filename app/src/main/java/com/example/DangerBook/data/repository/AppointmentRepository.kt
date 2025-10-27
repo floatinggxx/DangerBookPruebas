@@ -12,18 +12,18 @@ import java.util.Locale
 
 // Repositorio para manejar la lógica de negocio de las citas
 class AppointmentRepository(
-        private val appointmentDao: AppointmentDao,
-        private val context: Context // Necesario para enviar notificaciones
+    private val appointmentDao: AppointmentDao,
+    private val context: Context // Necesario para enviar notificaciones
 ) {
 
     // Crear una nueva cita
     suspend fun createAppointment(
-            userId: Long,
-            barberId: Long?,
-            serviceId: Long,
-            dateTime: Long,
-            durationMinutes: Int,
-            notes: String?
+        userId: Long,
+        barberId: Long?,
+        serviceId: Long,
+        dateTime: Long,
+        durationMinutes: Int,
+        notes: String?
     ): Result<Long> {
         return try {
             // Validar que la fecha no sea en el pasado
@@ -41,26 +41,16 @@ class AppointmentRepository(
 
             // Crear la cita
             val appointment = AppointmentEntity(
-                    userId = userId,
-                    barberId = barberId,
-                    serviceId = serviceId,
-                    dateTime = dateTime,
-                    durationMinutes = durationMinutes,
-                    status = "pending",
-                    notes = notes
+                userId = userId,
+                barberId = barberId,
+                serviceId = serviceId,
+                dateTime = dateTime,
+                durationMinutes = durationMinutes,
+                status = "pending",
+                notes = notes
             )
 
             val id = appointmentDao.insert(appointment)
-
-            // Enviar notificación de confirmación
-            val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-            val dateTimeFormatted = dateFormat.format(Date(dateTime))
-            NotificationHelper.sendAppointmentConfirmedNotification(
-                    context,
-                    id,
-                    dateTimeFormatted
-            )
-
             Result.success(id)
 
         } catch (e: Exception) {
@@ -97,16 +87,6 @@ class AppointmentRepository(
             }
 
             appointmentDao.cancelAppointment(appointmentId)
-
-            // Enviar notificación de cancelación
-            val dateFormat = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
-            val dateTimeFormatted = dateFormat.format(Date(appointment.dateTime))
-            NotificationHelper.sendAppointmentCancelledNotification(
-                    context,
-                    appointmentId,
-                    dateTimeFormatted
-            )
-
             Result.success(Unit)
 
         } catch (e: Exception) {
@@ -116,9 +96,9 @@ class AppointmentRepository(
 
     // Verificar horarios disponibles para un día específico
     suspend fun getAvailableTimeSlotsForDay(
-            barberId: Long,
-            date: Calendar,
-            serviceDurationMinutes: Int
+        barberId: Long,
+        date: Calendar,
+        serviceDurationMinutes: Int
     ): List<Long> {
         // Configurar inicio y fin del día
         val startOfDay = date.clone() as Calendar
@@ -133,9 +113,9 @@ class AppointmentRepository(
 
         // Obtener citas existentes del barbero ese día
         val existingAppointments = appointmentDao.getBarberAppointmentsForDay(
-                barberId,
-                startOfDay.timeInMillis,
-                endOfDay.timeInMillis
+            barberId,
+            startOfDay.timeInMillis,
+            endOfDay.timeInMillis
         )
 
         // Generar slots cada 30 minutos
@@ -147,7 +127,7 @@ class AppointmentRepository(
 
             // Verificar si este slot no colisiona con citas existentes
             val hasConflict = existingAppointments.any { appointment ->
-                    val appointmentEnd = appointment.dateTime + (appointment.durationMinutes * 60 * 1000)
+                val appointmentEnd = appointment.dateTime + (appointment.durationMinutes * 60 * 1000)
                 val slotEnd = slotTime + (serviceDurationMinutes * 60 * 1000)
 
                 // Hay conflicto si los intervalos se solapan
@@ -163,30 +143,5 @@ class AppointmentRepository(
         }
 
         return availableSlots
-    }
-
-    // Obtener citas de un barbero específico
-    fun getBarberAppointments(barberId: Long): Flow<List<AppointmentEntity>> {
-        return appointmentDao.getByBarberId(barberId)
-    }
-
-    // Confirmar una cita (barbero acepta)
-    suspend fun confirmAppointment(appointmentId: Long): Result<Unit> {
-        return try {
-            appointmentDao.confirmAppointment(appointmentId)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    // Completar una cita (barbero marca como finalizada)
-    suspend fun completeAppointment(appointmentId: Long): Result<Unit> {
-        return try {
-            appointmentDao.completeAppointment(appointmentId)
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
     }
 }
