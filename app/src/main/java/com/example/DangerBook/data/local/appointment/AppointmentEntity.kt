@@ -1,12 +1,12 @@
 package com.example.DangerBook.data.local.appointment
-
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.example.DangerBook.data.local.barbero.BarberEntity
 import com.example.DangerBook.data.local.service.ServiceEntity
-import com.example.uinavegacion.data.local.user.UserEntity
+import com.example.DangerBook.data.local.user.UserEntity
+
 
 // Entidad que representa una cita agendada en la barbería
 @Entity(

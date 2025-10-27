@@ -53,31 +53,28 @@ class AppointmentViewModel(
         loadUserAppointments()
     }
 
-    // Cargar citas del usuario
+    // Cargar citas del usuario de forma eficiente
     private fun loadUserAppointments() {
         viewModelScope.launch {
+            _myAppointmentsState.update { it.copy(isLoading = true, errorMsg = null) }
             try {
-                _myAppointmentsState.update { it.copy(isLoading = true, errorMsg = null) }
-
-                // Observar citas próximas
-                launch {
-                    repository.getUpcomingAppointments(userId).collectLatest { upcoming ->
-                        _myAppointmentsState.update { it.copy(upcomingAppointments = upcoming) }
+                // Observar todas las citas del usuario desde una única fuente de datos
+                repository.getUserAppointments(userId).collectLatest { allUserAppointments ->
+                    // Filtrar las citas próximas desde la lista completa
+                    val upcoming = allUserAppointments.filter {
+                        it.status in listOf("pending", "confirmed")
+                    }
+                    _myAppointmentsState.update {
+                        it.copy(
+                            isLoading = false,
+                            allAppointments = allUserAppointments,
+                            upcomingAppointments = upcoming
+                        )
                     }
                 }
-
-                // Observar todas las citas
-                launch {
-                    repository.getUserAppointments(userId).collectLatest { all ->
-                        _myAppointmentsState.update {
-                            it.copy(allAppointments = all, isLoading = false)
-                        }
-                    }
-                }
-
             } catch (e: Exception) {
                 _myAppointmentsState.update {
-                    it.copy(isLoading = false, errorMsg = "Error al cargar citas: ${e.message}")
+                    it.copy(isLoading = false, errorMsg = "Error al cargar las citas: ${e.message}")
                 }
             }
         }
@@ -96,7 +93,7 @@ class AppointmentViewModel(
         // Si ya hay fecha y barbero, recargar horarios
         val state = _bookState.value
         if (state.selectedDate != null && state.selectedBarberId != null) {
-            loadAvailableTimeSlots(state.selectedBarberId!!, state.selectedDate!!, durationMinutes)
+            loadAvailableTimeSlots(state.selectedBarberId, state.selectedDate, durationMinutes)
         }
         recomputeCanSubmit()
     }
@@ -140,24 +137,15 @@ class AppointmentViewModel(
     // Cargar horarios disponibles
     private fun loadAvailableTimeSlots(barberId: Long, date: Calendar, durationMinutes: Int) {
         viewModelScope.launch {
+            _bookState.update { it.copy(isLoadingSlots = true) }
             try {
-                _bookState.update { it.copy(isLoadingSlots = true) }
-
                 val slots = repository.getAvailableTimeSlotsForDay(barberId, date, durationMinutes)
-
                 _bookState.update {
-                    it.copy(
-                        availableTimeSlots = slots,
-                        isLoadingSlots = false
-                    )
+                    it.copy(availableTimeSlots = slots, isLoadingSlots = false)
                 }
-
             } catch (e: Exception) {
                 _bookState.update {
-                    it.copy(
-                        isLoadingSlots = false,
-                        errorMsg = "Error al cargar horarios: ${e.message}"
-                    )
+                    it.copy(isLoadingSlots = false, errorMsg = "Error al cargar horarios: ${e.message}")
                 }
             }
         }
@@ -166,49 +154,52 @@ class AppointmentViewModel(
     // Validar si se puede enviar
     private fun recomputeCanSubmit() {
         val s = _bookState.value
-        val can = s.selectedServiceId != null &&
+        val canSubmit = s.selectedServiceId != null &&
                 s.selectedBarberId != null &&
                 s.selectedDate != null &&
                 s.selectedTimeSlot != null
-        _bookState.update { it.copy(canSubmit = can) }
+        _bookState.update { it.copy(canSubmit = canSubmit) }
     }
 
     // Enviar (crear cita)
     fun submitBooking(serviceDurationMinutes: Int) {
-        val s = _bookState.value
-        if (!s.canSubmit || s.isSubmitting) return
+        val state = _bookState.value
+        if (!state.canSubmit || state.isSubmitting) return
 
-        viewModelScope.launch {
-            try {
-                _bookState.update { it.copy(isSubmitting = true, errorMsg = null) }
+        // Usar \"let\" para evitar el uso de \"!!\" y aumentar la seguridad
+        state.selectedBarberId?.let { barberId ->
+            state.selectedServiceId?.let { serviceId ->
+                state.selectedTimeSlot?.let { timeSlot ->
+                    viewModelScope.launch {
+                        try {
+                            _bookState.update { it.copy(isSubmitting = true, errorMsg = null) }
 
-                val result = repository.createAppointment(
-                    userId = userId,
-                    barberId = s.selectedBarberId,
-                    serviceId = s.selectedServiceId!!,
-                    dateTime = s.selectedTimeSlot!!,
-                    durationMinutes = serviceDurationMinutes,
-                    notes = s.notes.ifBlank { null }
-                )
+                            val result = repository.createAppointment(
+                                userId = userId,
+                                barberId = barberId,
+                                serviceId = serviceId,
+                                dateTime = timeSlot,
+                                durationMinutes = serviceDurationMinutes,
+                                notes = state.notes.ifBlank { null }
+                            )
 
-                _bookState.update {
-                    if (result.isSuccess) {
-                        it.copy(isSubmitting = false, success = true, errorMsg = null)
-                    } else {
-                        it.copy(
-                            isSubmitting = false,
-                            success = false,
-                            errorMsg = result.exceptionOrNull()?.message ?: "Error al agendar"
-                        )
+                            _bookState.update {
+                                if (result.isSuccess) {
+                                    it.copy(isSubmitting = false, success = true)
+                                } else {
+                                    it.copy(
+                                        isSubmitting = false,
+                                        success = false,
+                                        errorMsg = result.exceptionOrNull()?.message ?: "Error desconocido al agendar"
+                                    )
+                                }
+                            }
+                        } catch (e: Exception) {
+                            _bookState.update {
+                                it.copy(isSubmitting = false, errorMsg = "Error inesperado: ${e.message}")
+                            }
+                        }
                     }
-                }
-
-            } catch (e: Exception) {
-                _bookState.update {
-                    it.copy(
-                        isSubmitting = false,
-                        errorMsg = "Error inesperado: ${e.message}"
-                    )
                 }
             }
         }
@@ -216,52 +207,52 @@ class AppointmentViewModel(
 
     // Limpiar estado después de agendar
     fun clearBookingResult() {
-        _bookState.value = BookAppointmentUiState()
+        _bookState.update { BookAppointmentUiState() }
+    }
+
+    // --- Acciones de citas (cancelar, confirmar, etc.) ---
+
+    // Función de ayuda para ejecutar acciones de citas y manejar errores de forma centralizada
+    private fun executeAppointmentAction(action: suspend () -> Result<Unit>, errorPrefix: String) {
+        viewModelScope.launch {
+            _myAppointmentsState.update { it.copy(errorMsg = null) }
+            try {
+                val result = action()
+                if (result.isFailure) {
+                    _myAppointmentsState.update {
+                        it.copy(errorMsg = "$errorPrefix: ${result.exceptionOrNull()?.message}")
+                    }
+                }
+            } catch (e: Exception) {
+                _myAppointmentsState.update {
+                    it.copy(errorMsg = "$errorPrefix: ${e.message}")
+                }
+            }
+        }
     }
 
     // Cancelar una cita
     fun cancelAppointment(appointmentId: Long) {
-        viewModelScope.launch {
-            try {
-                val result = repository.cancelAppointment(appointmentId)
-                if (result.isFailure) {
-                    _myAppointmentsState.update {
-                        it.copy(errorMsg = result.exceptionOrNull()?.message)
-                    }
-                }
-                // Las citas se actualizarán automáticamente por el Flow
-            } catch (e: Exception) {
-                _myAppointmentsState.update {
-                    it.copy(errorMsg = "Error al cancelar: ${e.message}")
-                }
-            }
-        }
+        executeAppointmentAction(
+            action = { repository.cancelAppointment(appointmentId) },
+            errorPrefix = "Error al cancelar"
+        )
     }
 
     // Confirmar una cita (para barberos)
     fun confirmAppointment(appointmentId: Long) {
-        viewModelScope.launch {
-            try {
-                repository.confirmAppointment(appointmentId)
-            } catch (e: Exception) {
-                _myAppointmentsState.update {
-                    it.copy(errorMsg = "Error al confirmar: ${e.message}")
-                }
-            }
-        }
+        executeAppointmentAction(
+            action = { repository.confirmAppointment(appointmentId) },
+            errorPrefix = "Error al confirmar"
+        )
     }
 
     // Completar una cita (para barberos)
     fun completeAppointment(appointmentId: Long) {
-        viewModelScope.launch {
-            try {
-                repository.completeAppointment(appointmentId)
-            } catch (e: Exception) {
-                _myAppointmentsState.update {
-                    it.copy(errorMsg = "Error al completar: ${e.message}")
-                }
-            }
-        }
+        executeAppointmentAction(
+            action = { repository.completeAppointment(appointmentId) },
+            errorPrefix = "Error al completar"
+        )
     }
 
     // Cargar citas de un barbero específico

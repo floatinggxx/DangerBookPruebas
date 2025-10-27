@@ -1,5 +1,4 @@
 package com.example.DangerBook.data.local.barbero
-
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 

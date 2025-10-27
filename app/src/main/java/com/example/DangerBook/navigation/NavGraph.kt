@@ -34,19 +34,15 @@ fun AppNavGraph(
     appointmentViewModel: AppointmentViewModel,
     currentUserId: Long?,
     currentUserName: String?,
-    currentUserRole: String?, // NUEVO: rol del usuario
-    currentUserPhoto: String?, // NUEVO: foto del usuario
-    barbers: List<com.example.uinavegacion.data.local.user.UserEntity>, // NUEVO: lista de barberos
+    currentUserRole: String?,
     onLogout: () -> Unit,
-    onPhotoUpdated: (String) -> Unit // NUEVO: callback para actualizar foto
+    onPhotoUpdated: (String) -> Unit
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    // Determinar si el usuario está autenticado
     val isAuthenticated = currentUserId != null
 
-    // Helpers de navegación
     val goHome: () -> Unit = { navController.navigate(Route.Home.path) }
     val goLogin: () -> Unit = { navController.navigate(Route.Login.path) }
     val goRegister: () -> Unit = { navController.navigate(Route.Register.path) }
@@ -55,13 +51,11 @@ fun AppNavGraph(
     val goMyAppointments: () -> Unit = { navController.navigate(Route.MyAppointments.path) }
     val goProfile: () -> Unit = { navController.navigate(Route.Profile.path) }
 
-    // Helper para cerrar sesión y volver al home
     val handleLogout: () -> Unit = {
         scope.launch { drawerState.close() }
         onLogout()
         navController.navigate(Route.Home.path) {
-            // Limpiar el backstack para evitar volver a pantallas autenticadas
-            popUpTo(Route.Home.path) { inclusive = true }
+            popUpTo(navController.graph.startDestinationId) { inclusive = true }
         }
     }
 
@@ -70,7 +64,6 @@ fun AppNavGraph(
         drawerContent = {
             AppDrawer(
                 currentRoute = navController.currentBackStackEntry?.destination?.route,
-                // Mostrar ítems diferentes según si está autenticado o no
                 items = if (isAuthenticated) {
                     authenticatedDrawerItems(
                         userName = currentUserName ?: "Usuario",
@@ -90,7 +83,10 @@ fun AppNavGraph(
                             scope.launch { drawerState.close() }
                             goProfile()
                         },
-                        onLogout = handleLogout
+                        onLogout = handleLogout,
+                        userRole = currentUserRole ?: "",
+                        onBarberAppointments = {},
+                        onAdminDashboard = {}
                     )
                 } else {
                     defaultDrawerItems(
@@ -124,7 +120,8 @@ fun AppNavGraph(
                     onBookAppointment = goBookAppointment,
                     onMyAppointments = goMyAppointments,
                     onProfile = goProfile,
-                    onLogout = handleLogout
+                    onLogout = handleLogout,
+                    userRole = currentUserRole ?: ""
                 )
             }
         ) { innerPadding ->
@@ -133,14 +130,14 @@ fun AppNavGraph(
                 startDestination = Route.Home.path,
                 modifier = Modifier.padding(innerPadding)
             ) {
-                // ---- RUTAS PÚBLICAS ----
 
                 composable(Route.Home.path) {
                     HomeScreen(
                         isAuthenticated = isAuthenticated,
                         onGoLogin = goLogin,
                         onGoRegister = goRegister,
-                        onGoServices = goServices
+                        onGoServices = goServices,
+                        userRole = currentUserRole ?: ""
                     )
                 }
 
@@ -148,7 +145,6 @@ fun AppNavGraph(
                     LoginScreenVm(
                         vm = authViewModel,
                         onLoginOkNavigateHome = {
-                            // Después del login exitoso, ir a servicios
                             navController.navigate(Route.Services.path) {
                                 popUpTo(Route.Home.path) { inclusive = false }
                             }
@@ -165,17 +161,13 @@ fun AppNavGraph(
                     )
                 }
 
-                // ---- RUTAS PRIVADAS (requieren autenticación) ----
-
                 composable(Route.Services.path) {
-                    // Si no está autenticado, redirigir a login
                     if (!isAuthenticated) {
                         navController.navigate(Route.Login.path)
                     } else {
                         ServicesScreen(
                             vm = servicesViewModel,
-                            onBookService = { serviceId ->
-                                // Navegar a agendar con el servicio preseleccionado
+                            onBookService = { 
                                 goBookAppointment()
                             }
                         )
@@ -190,7 +182,6 @@ fun AppNavGraph(
                             appointmentVm = appointmentViewModel,
                             servicesVm = servicesViewModel,
                             onAppointmentBooked = {
-                                // Navegar a "Mis Citas" después de agendar
                                 navController.navigate(Route.MyAppointments.path) {
                                     popUpTo(Route.BookAppointment.path) { inclusive = true }
                                 }
@@ -217,7 +208,9 @@ fun AppNavGraph(
                         ProfileScreen(
                             userId = currentUserId!!,
                             userName = currentUserName ?: "Usuario",
-                            onLogout = handleLogout
+                            onLogout = handleLogout,
+                            onPhotoUpdated = onPhotoUpdated,
+                            userRole = currentUserRole ?: ""
                         )
                     }
                 }

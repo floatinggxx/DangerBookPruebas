@@ -19,7 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 fun AppTopBar(
     isAuthenticated: Boolean,
     userName: String?,
-    userRole: String, // NUEVO
+    userRole: String,
     onOpenDrawer: () -> Unit,
     onHome: () -> Unit,
     onLogin: () -> Unit,
@@ -27,7 +27,8 @@ fun AppTopBar(
     onServices: () -> Unit,
     onBookAppointment: () -> Unit,
     onMyAppointments: () -> Unit,
-    onBarberAppointments: () -> Unit
+    onProfile: () -> Unit,
+    onLogout: () -> Unit
 ) {
     var showMenu by remember { mutableStateOf(false) }
 

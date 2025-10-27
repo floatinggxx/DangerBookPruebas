@@ -1,5 +1,4 @@
-package com.example.uinavegacion.data.local.user
-
+package com.example.DangerBook.data.local.user
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy

@@ -1,12 +1,11 @@
 package com.example.DangerBook.data.local.database
-
 import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
-import com.example.uinavegacion.data.local.user.UserDao
-import com.example.uinavegacion.data.local.user.UserEntity
+import com.example.DangerBook.data.local.user.UserDao
+import com.example.DangerBook.data.local.user.UserEntity
 import com.example.DangerBook.data.local.service.ServiceDao
 import com.example.DangerBook.data.local.service.ServiceEntity
 import com.example.DangerBook.data.local.barbero.BarberDao

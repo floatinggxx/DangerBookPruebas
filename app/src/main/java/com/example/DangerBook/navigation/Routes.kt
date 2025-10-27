@@ -1,23 +1,23 @@
 package com.example.DangerBook.navigation
 
-// Clase sellada para rutas: evita "strings mágicos" y facilita refactors
+// Clase sellada para rutas: evita \"strings mágicos\" y facilita refactors
 sealed class Route(val path: String) {
     // Rutas públicas (sin autenticación)
-    data object Home : Route("home")
-    data object Login : Route("login")
-    data object Register : Route("register")
+    object Home : Route("home")
+    object Login : Route("login")
+    object Register : Route("register")
 
     // Rutas privadas (requieren autenticación)
-    data object Services : Route("services") // Pantalla de servicios disponibles
-    data object BookAppointment : Route("book_appointment") // Agendar nueva cita
-    data object MyAppointments : Route("my_appointments") // Ver mis citas
-    data object Profile : Route("profile") // Perfil del usuario
+    object Services : Route("services") // Pantalla de servicios disponibles
+    object BookAppointment : Route("book_appointment") // Agendar nueva cita
+    object MyAppointments : Route("my_appointments") // Ver mis citas
+    object Profile : Route("profile") // Perfil del usuario
 
     // Rutas para barberos (solo role = "barber")
-    data object BarberAppointments : Route("barber_appointments") // Citas asignadas al barbero
+    object BarberAppointments : Route("barber_appointments") // Citas asignadas al barbero
 
     // Rutas para administradores (solo role = "admin")
-    data object AdminDashboard : Route("admin_dashboard") // Panel de administración
+    object AdminDashboard : Route("admin_dashboard") // Panel de administración
 }
 
 /*

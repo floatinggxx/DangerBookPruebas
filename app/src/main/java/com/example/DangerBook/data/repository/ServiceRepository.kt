@@ -1,5 +1,4 @@
 package com.example.DangerBook.data.repository
-
 import com.example.DangerBook.data.local.barbero.BarberDao
 import com.example.DangerBook.data.local.barbero.BarberEntity
 import com.example.DangerBook.data.local.service.ServiceDao

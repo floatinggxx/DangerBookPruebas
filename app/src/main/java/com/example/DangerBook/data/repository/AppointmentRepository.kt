@@ -1,14 +1,9 @@
 package com.example.DangerBook.data.repository
-
 import android.content.Context
 import com.example.DangerBook.data.local.appointment.AppointmentDao
 import com.example.DangerBook.data.local.appointment.AppointmentEntity
-import com.example.DangerBook.data.local.notifications.NotificationHelper
 import kotlinx.coroutines.flow.Flow
-import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
-import java.util.Locale
 
 // Repositorio para manejar la lógica de negocio de las citas
 class AppointmentRepository(
@@ -76,22 +71,37 @@ class AppointmentRepository(
     // Cancelar una cita
     suspend fun cancelAppointment(appointmentId: Long): Result<Unit> {
         return try {
-            val appointment = appointmentDao.getById(appointmentId)
-            if (appointment == null) {
-                return Result.failure(IllegalArgumentException("Cita no encontrada"))
-            }
-
-            // Verificar que la cita no esté ya cancelada o completada
-            if (appointment.status in listOf("cancelled", "completed")) {
-                return Result.failure(IllegalArgumentException("Esta cita ya no se puede cancelar"))
-            }
-
             appointmentDao.cancelAppointment(appointmentId)
             Result.success(Unit)
 
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    // Confirmar una cita
+    suspend fun confirmAppointment(appointmentId: Long): Result<Unit> {
+        return try {
+            appointmentDao.confirmAppointment(appointmentId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Completar una cita
+    suspend fun completeAppointment(appointmentId: Long): Result<Unit> {
+        return try {
+            appointmentDao.completeAppointment(appointmentId)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Obtener todas las citas de un barbero
+    fun getBarberAppointments(barberId: Long): Flow<List<AppointmentEntity>> {
+        return appointmentDao.getByBarberId(barberId)
     }
 
     // Verificar horarios disponibles para un día específico

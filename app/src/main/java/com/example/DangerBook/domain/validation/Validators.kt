@@ -1,5 +1,4 @@
 package com.example.DangerBook.domain.validation
-
 import android.util.Patterns // Usamos el patrón estándar de Android para emails
 
 // Valida que el email no esté vacío y cumpla patrón de email

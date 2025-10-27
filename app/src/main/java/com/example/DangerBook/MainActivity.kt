@@ -1,5 +1,4 @@
 package com.example.DangerBook
-
 import android.Manifest
 import android.os.Build
 import android.os.Bundle
@@ -11,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.example.DangerBook.data.local.database.AppDatabase
@@ -85,14 +85,9 @@ fun AppRoot() {
     val appointmentRepository = AppointmentRepository(appointmentDao, context)
 
     // Estado de autenticación desde DataStore
-    val isLoggedIn by userPrefs.isLoggedIn.collectAsStateWithLifecycle(false)
     val currentUserId by userPrefs.userId.collectAsStateWithLifecycle(null)
     val currentUserName by userPrefs.userName.collectAsStateWithLifecycle(null)
     val currentUserRole by userPrefs.userRole.collectAsStateWithLifecycle(null)
-    val currentUserPhoto by userPrefs.userPhoto.collectAsStateWithLifecycle(null)
-
-    // Lista de barberos (UserEntity con role = "barber")
-    val barbers by userRepository.getAllBarbers().collectAsStateWithLifecycle(emptyList())
 
     // Crear AuthViewModel
     val authViewModel: AuthViewModel = viewModel(
@@ -100,19 +95,17 @@ fun AppRoot() {
     )
 
     // Observar el estado de login para guardar sesión en DataStore
-    LaunchedEffect(Unit) {
-        scope.launch {
-            authViewModel.login.collectLatest { loginState ->
-                if (loginState.success && loginState.loggedUser != null) {
-                    val user = loginState.loggedUser
-                    userPrefs.saveUserSession(
-                        userId = user.id,
-                        userName = user.name,
-                        userEmail = user.email,
-                        userRole = user.role,
-                        userPhoto = user.photoUri
-                    )
-                }
+    LaunchedEffect(authViewModel) {
+        authViewModel.login.collectLatest { loginState ->
+            if (loginState.success && loginState.loggedUser != null) {
+                val user = loginState.loggedUser
+                userPrefs.saveUserSession(
+                    userId = user.id,
+                    userName = user.name,
+                    userEmail = user.email,
+                    userRole = user.role,
+                    userPhoto = null
+                )
             }
         }
     }
@@ -155,8 +148,6 @@ fun AppRoot() {
             currentUserId = currentUserId,
             currentUserName = currentUserName,
             currentUserRole = currentUserRole,
-            currentUserPhoto = currentUserPhoto,
-            barbers = barbers,
             onLogout = handleLogout,
             onPhotoUpdated = handlePhotoUpdated
         )

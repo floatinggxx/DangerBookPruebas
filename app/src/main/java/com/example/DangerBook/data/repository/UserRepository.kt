@@ -1,7 +1,6 @@
 package com.example.DangerBook.data.repository
-
-import com.example.uinavegacion.data.local.user.UserDao
-import com.example.uinavegacion.data.local.user.UserEntity
+import com.example.DangerBook.data.local.user.UserDao
+import com.example.DangerBook.data.local.user.UserEntity
 import kotlinx.coroutines.flow.Flow
 
 // Repositorio para manejar la lógica de negocio de usuarios

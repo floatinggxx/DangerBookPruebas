@@ -3,7 +3,7 @@ package com.example.DangerBook.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.DangerBook.data.repository.UserRepository
-import com.example.uinavegacion.data.local.user.UserEntity
+import com.example.DangerBook.data.local.user.UserEntity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

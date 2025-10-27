@@ -1,5 +1,4 @@
-package com.example.uinavegacion.data.local.user
-
+package com.example.DangerBook.data.local.user
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 

@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.uinavegacion"
+    namespace = "com.example.Dangerbook"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.uinavegacion"
+        applicationId = "com.example.Dangerbook"
         minSdk = 24
         targetSdk = 36
         versionCode = 1
@@ -64,7 +64,7 @@ dependencies {
 
     // ViewModel y Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.6.1")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")

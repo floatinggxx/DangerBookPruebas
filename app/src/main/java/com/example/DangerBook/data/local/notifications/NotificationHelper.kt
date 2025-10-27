@@ -1,5 +1,4 @@
 package com.example.DangerBook.data.local.notifications
-
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
@@ -13,7 +12,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.example.DangerBook.MainActivity
-import com.example.uinavegacion.R
+
 
 // Helper para enviar notificaciones locales en DangerBook
 object NotificationHelper {
