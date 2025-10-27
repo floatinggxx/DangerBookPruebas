@@ -2,6 +2,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Permisos para notificaciones (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- Permiso para la cámara -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -11,6 +18,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.UINavegacion">
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -18,21 +26,21 @@
             android:theme="@style/Theme.UINavegacion">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
-        <!-- FileProvider para compartir la Uri temporal donde se guarda la foto tomada por la cámara -->
+        <!-- FileProvider para compartir la Uri temporal donde se guardará la foto -->
         <provider
-            android:grantUriPermissions="true"
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.example.uinavegacion.fileprovider"
             android:exported="false"
-            android:authorities="com.example.DangerBook.fileprovider"
-            android:name="androidx.core.content.FileProvider" >
-        <meta-data
-            android:name="android.support.FILE_PROVIDER_PATHS"
-            android:resource="@xml/file_paths" />
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths"/>
         </provider>
+
     </application>
 
 </manifest>

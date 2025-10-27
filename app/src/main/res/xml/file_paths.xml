@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<paths>
-    <!-- Directorio interno de guardado de las fotos -->
-    <cache-path
-        name="camera_cache"
-        path="images/" />
+<!-- Configuración de rutas para FileProvider (permite compartir archivos de forma segura) -->
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- cache-path: archivos temporales en el directorio de caché -->
+    <cache-path name="images" path="images/" />
+
+    <!-- files-path: archivos internos de la app -->
+    <files-path name="app_files" path="." />
+
+    <!-- external-path: almacenamiento externo -->
+    <external-path name="external_files" path="." />
 </paths>
