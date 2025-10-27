@@ -1,82 +1,142 @@
 package com.example.DangerBook.ui.components
 
-import androidx.compose.material.icons.Icons // Conjunto de íconos Material
-import androidx.compose.material.icons.filled.Home // Ícono Home
-import androidx.compose.material.icons.filled.AccountCircle // Ícono Login
-import androidx.compose.material.icons.filled.Menu // Ícono hamburguesa
-import androidx.compose.material.icons.filled.MoreVert // Ícono 3 puntitos (overflow)
-import androidx.compose.material.icons.filled.Person // Ícono Registro
-import androidx.compose.material3.CenterAlignedTopAppBar // TopAppBar centrada
-import androidx.compose.material3.DropdownMenu // Menú desplegable
-import androidx.compose.material3.DropdownMenuItem // Opción del menú
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon // Para mostrar íconos
-import androidx.compose.material3.IconButton // Botones con ícono
-import androidx.compose.material3.MaterialTheme // Tema Material
-import androidx.compose.material3.Text // Texto
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.runtime.* // remember / mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.ui.text.style.TextOverflow
 
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable // Composable reutilizable: barra superior
+@Composable
 fun AppTopBar(
-    onOpenDrawer: () -> Unit, // Abre el drawer (hamburguesa)
-    onHome: () -> Unit,       // Navega a Home
-    onLogin: () -> Unit,      // Navega a Login
-    onRegister: () -> Unit    // Navega a Registro
+    isAuthenticated: Boolean,
+    userName: String?,
+    userRole: String, // NUEVO
+    onOpenDrawer: () -> Unit,
+    onHome: () -> Unit,
+    onLogin: () -> Unit,
+    onRegister: () -> Unit,
+    onServices: () -> Unit,
+    onBookAppointment: () -> Unit,
+    onMyAppointments: () -> Unit,
+    onBarberAppointments: () -> Unit
 ) {
-    //lo que hace es crear una variable de estado recordada que le dice a la interfaz
-    // si el menú desplegable de 3 puntitos debe estar visible (true) o oculto (false).
-    var showMenu by remember { mutableStateOf(false) } // Estado del menú overflow
+    var showMenu by remember { mutableStateOf(false) }
 
-    CenterAlignedTopAppBar( // Barra alineada al centro
+    CenterAlignedTopAppBar(
         colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primary
+            containerColor = MaterialTheme.colorScheme.primary,
+            titleContentColor = MaterialTheme.colorScheme.onPrimary,
+            actionIconContentColor = MaterialTheme.colorScheme.onPrimary,
+            navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
         ),
-        title = { // Slot del título
+        title = {
             Text(
-                text = "Demo Navegación Compose", // Título visible
-                style = MaterialTheme.typography.titleLarge, // Estilo grande
-                maxLines = 1,              // asegura una sola línea Int.MAX_VALUE   // permite varias líneas
-                overflow = TextOverflow.Ellipsis // agrega "..." si no cabe
-
+                text = "DangerBook",
+                style = MaterialTheme.typography.titleLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         },
-        navigationIcon = { // Ícono a la izquierda (hamburguesa)
-            IconButton(onClick = onOpenDrawer) { // Al presionar, abre drawer
-                Icon(imageVector = Icons.Filled.Menu, contentDescription = "Menú") // Ícono
+        navigationIcon = {
+            IconButton(onClick = onOpenDrawer) {
+                Icon(imageVector = Icons.Filled.Menu, contentDescription = "Menú")
             }
         },
-        actions = { // Acciones a la derecha (íconos + overflow)
-            IconButton(onClick = onHome) { // Ir a Home
-                Icon(Icons.Filled.Home, contentDescription = "Home") // Ícono Home
-            }
-            IconButton(onClick = onLogin) { // Ir a Login
-                Icon(Icons.Filled.AccountCircle, contentDescription = "Login") // Ícono Login
-            }
-            IconButton(onClick = onRegister) { // Ir a Registro
-                Icon(Icons.Filled.Person, contentDescription = "Registro") // Ícono Registro
-            }
-            IconButton(onClick = { showMenu = true }) { // Abre menú overflow
-                Icon(Icons.Filled.MoreVert, contentDescription = "Más") // Ícono 3 puntitos
-            }
-            DropdownMenu(
-                expanded = showMenu, // Si está abierto
-                onDismissRequest = { showMenu = false } // Cierra al tocar fuera
-            ) {
-                DropdownMenuItem( // Opción Home
-                    text = { Text("Home") }, // Texto opción
-                    onClick = { showMenu = false; onHome() } // Navega y cierra
-                )
-                DropdownMenuItem( // Opción Login
-                    text = { Text("Login") },
-                    onClick = { showMenu = false; onLogin() }
-                )
-                DropdownMenuItem( // Opción Registro
-                    text = { Text("Registro") },
-                    onClick = { showMenu = false; onRegister() }
-                )
+        actions = {
+            if (isAuthenticated) {
+                // Acciones para usuarios autenticados
+                IconButton(onClick = onServices) {
+                    Icon(Icons.Filled.ContentCut, contentDescription = "Servicios")
+                }
+                IconButton(onClick = onBookAppointment) {
+                    Icon(Icons.Filled.EventAvailable, contentDescription = "Agendar")
+                }
+                IconButton(onClick = onMyAppointments) {
+                    Icon(Icons.Filled.Event, contentDescription = "Mis Citas")
+                }
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = "Más")
+                }
+
+                // Menú desplegable para usuarios autenticados
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    // Mostrar nombre del usuario
+                    DropdownMenuItem(
+                        text = { Text("Hola, $userName", style = MaterialTheme.typography.labelSmall) },
+                        onClick = { },
+                        enabled = false
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Servicios") },
+                        onClick = { showMenu = false; onServices() },
+                        leadingIcon = { Icon(Icons.Filled.ContentCut, null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Agendar Cita") },
+                        onClick = { showMenu = false; onBookAppointment() },
+                        leadingIcon = { Icon(Icons.Filled.EventAvailable, null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Mis Citas") },
+                        onClick = { showMenu = false; onMyAppointments() },
+                        leadingIcon = { Icon(Icons.Filled.Event, null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Perfil") },
+                        onClick = { showMenu = false; onProfile() },
+                        leadingIcon = { Icon(Icons.Filled.AccountCircle, null) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Cerrar Sesión") },
+                        onClick = { showMenu = false; onLogout() },
+                        leadingIcon = { Icon(Icons.Filled.Logout, null) }
+                    )
+                }
+            } else {
+                // Acciones para usuarios NO autenticados
+                IconButton(onClick = onHome) {
+                    Icon(Icons.Filled.Home, contentDescription = "Home")
+                }
+                IconButton(onClick = onLogin) {
+                    Icon(Icons.Filled.AccountCircle, contentDescription = "Login")
+                }
+                IconButton(onClick = onRegister) {
+                    Icon(Icons.Filled.Person, contentDescription = "Registro")
+                }
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = "Más")
+                }
+
+                // Menú desplegable para usuarios NO autenticados
+                DropdownMenu(
+                    expanded = showMenu,
+                    onDismissRequest = { showMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Home") },
+                        onClick = { showMenu = false; onHome() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Iniciar Sesión") },
+                        onClick = { showMenu = false; onLogin() }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Registrarse") },
+                        onClick = { showMenu = false; onRegister() }
+                    )
+                }
             }
         }
     )

@@ -16,45 +16,44 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle // Observa StateFl
 import com.example.DangerBook.ui.viewmodel.AuthViewModel         // ViewModel
 
 //1 creamos la union con el viewmodel creado
-@Composable                                                  // Pantalla Registro conectada al VM
+@Composable // Pantalla Registro conectada al VM
 fun RegisterScreenVm(
-    vm: AuthViewModel,                            // MOD: recibimos el VM desde NavGraph
-    onRegisteredNavigateLogin: () -> Unit,                   // Navega a Login si success=true
-    onGoLogin: () -> Unit                                    // Botón alternativo para ir a Login
+    vm: AuthViewModel,
+    onRegisteredNavigateLogin: () -> Unit, // Navega a Login si success=true
+    onGoLogin: () -> Unit, // Botón alternativo para ir a Login
+    allowRoleSelection: Boolean = false // NUEVO: permitir seleccionar rol (solo para admin)
 ) {
+    val state by vm.register.collectAsStateWithLifecycle() // Observa estado en tiempo real
 
-    val state by vm.register.collectAsStateWithLifecycle()   // Observa estado en tiempo real
-
-    if (state.success) {                                     // Si registro fue exitoso
-        vm.clearRegisterResult()                             // Limpia banderas
-        onRegisteredNavigateLogin()                          // Navega a Login
+    if (state.success) { // Si registro fue exitoso
+        vm.clearRegisterResult() // Limpia banderas
+        onRegisteredNavigateLogin() // Navega a Login
     }
 
-    RegisterScreen(                                          // Delegamos UI presentacional
-        name = state.name,                                   // 1) Nombre
-        email = state.email,                                 // 2) Email
-        phone = state.phone,                                 // 3) Teléfono
-        pass = state.pass,                                   // 4) Password
-        confirm = state.confirm,                             // 5) Confirmación
-
-        nameError = state.nameError,                         // Errores por campo
+    RegisterScreen( // Delegamos UI presentacional
+        name = state.name,
+        email = state.email,
+        phone = state.phone,
+        pass = state.pass,
+        confirm = state.confirm,
+        role = state.role, // NUEVO
+        nameError = state.nameError,
         emailError = state.emailError,
         phoneError = state.phoneError,
         passError = state.passError,
         confirmError = state.confirmError,
-
-        canSubmit = state.canSubmit,                         // Habilitar "Registrar"
-        isSubmitting = state.isSubmitting,                   // Flag de carga
-        errorMsg = state.errorMsg,                           // Error global (duplicado)
-
-        onNameChange = vm::onNameChange,                     // Handlers
+        canSubmit = state.canSubmit,
+        isSubmitting = state.isSubmitting,
+        errorMsg = state.errorMsg,
+        allowRoleSelection = allowRoleSelection, // NUEVO
+        onNameChange = vm::onNameChange,
         onEmailChange = vm::onRegisterEmailChange,
         onPhoneChange = vm::onPhoneChange,
         onPassChange = vm::onRegisterPassChange,
         onConfirmChange = vm::onConfirmChange,
-
-        onSubmit = vm::submitRegister,                       // Acción Registrar
-        onGoLogin = onGoLogin                                // Ir a Login
+        onRoleChange = vm::onRoleChange, // NUEVO
+        onSubmit = vm::submitRegister,
+        onGoLogin = onGoLogin
     )
 }
 

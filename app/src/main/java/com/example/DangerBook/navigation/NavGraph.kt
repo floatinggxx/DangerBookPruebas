@@ -1,100 +1,225 @@
 package com.example.DangerBook.navigation
-import androidx.compose.foundation.layout.padding // Para aplicar innerPadding
-import androidx.compose.material3.Scaffold // Estructura base con slots
-import androidx.compose.runtime.Composable // Marcador composable
-import androidx.compose.ui.Modifier // Modificador
-import androidx.navigation.NavHostController // Controlador de navegación
-import androidx.navigation.compose.NavHost // Contenedor de destinos
-import androidx.navigation.compose.composable // Declarar cada destino
-import kotlinx.coroutines.launch // Para abrir/cerrar drawer con corrutinas
-
-import androidx.compose.material3.ModalNavigationDrawer // Drawer lateral modal
-import androidx.compose.material3.rememberDrawerState // Estado del drawer
-import androidx.compose.material3.DrawerValue // Valores (Opened/Closed)
-import androidx.compose.runtime.rememberCoroutineScope // Alcance de corrutina
-
-
-import com.example.DangerBook.ui.components.AppTopBar // Barra superior
-import com.example.DangerBook.ui.components.AppDrawer // Drawer composable
-import com.example.DangerBook.ui.components.defaultDrawerItems // Ítems por defecto
-import com.example.DangerBook.ui.screen.HomeScreen // Pantalla Home
-import com.example.DangerBook.ui.screen.LoginScreenVm // Pantalla Login
-import com.example.DangerBook.ui.screen.RegisterScreenVm // Pantalla Registro
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.DrawerValue
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import kotlinx.coroutines.launch
+import com.example.DangerBook.ui.components.AppTopBar
+import com.example.DangerBook.ui.components.AppDrawer
+import com.example.DangerBook.ui.components.authenticatedDrawerItems
+import com.example.DangerBook.ui.components.defaultDrawerItems
+import com.example.DangerBook.ui.screen.HomeScreen
+import com.example.DangerBook.ui.screen.LoginScreenVm
+import com.example.DangerBook.ui.screen.RegisterScreenVm
+import com.example.DangerBook.ui.screen.ServicesScreen
+import com.example.DangerBook.ui.screen.BookAppointmentScreen
+import com.example.DangerBook.ui.screen.MyAppointmentsScreen
+import com.example.DangerBook.ui.screen.ProfileScreen
 import com.example.DangerBook.ui.viewmodel.AuthViewModel
+import com.example.DangerBook.ui.viewmodel.ServicesViewModel
+import com.example.DangerBook.ui.viewmodel.AppointmentViewModel
 
-@Composable // Gráfico de navegación + Drawer + Scaffold
-fun AppNavGraph(navController: NavHostController,
-                authViewModel: AuthViewModel        // <-- 1.- NUEVO: recibimos el VM inyectado desde MainActivity
-     ) { // Recibe el controlador
+@Composable
+fun AppNavGraph(
+    navController: NavHostController,
+    authViewModel: AuthViewModel,
+    servicesViewModel: ServicesViewModel,
+    appointmentViewModel: AppointmentViewModel,
+    currentUserId: Long?,
+    currentUserName: String?,
+    currentUserRole: String?, // NUEVO: rol del usuario
+    currentUserPhoto: String?, // NUEVO: foto del usuario
+    barbers: List<com.example.uinavegacion.data.local.user.UserEntity>, // NUEVO: lista de barberos
+    onLogout: () -> Unit,
+    onPhotoUpdated: (String) -> Unit // NUEVO: callback para actualizar foto
+) {
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed) // Estado del drawer
-    val scope = rememberCoroutineScope() // Necesario para abrir/cerrar drawer
+    // Determinar si el usuario está autenticado
+    val isAuthenticated = currentUserId != null
 
-    // Helpers de navegación (reutilizamos en topbar/drawer/botones)
-    val goHome: () -> Unit    = { navController.navigate(Route.Home.path) }    // Ir a Home
-    val goLogin: () -> Unit   = { navController.navigate(Route.Login.path) }   // Ir a Login
-    val goRegister: () -> Unit = { navController.navigate(Route.Register.path) } // Ir a Registro
+    // Helpers de navegación
+    val goHome: () -> Unit = { navController.navigate(Route.Home.path) }
+    val goLogin: () -> Unit = { navController.navigate(Route.Login.path) }
+    val goRegister: () -> Unit = { navController.navigate(Route.Register.path) }
+    val goServices: () -> Unit = { navController.navigate(Route.Services.path) }
+    val goBookAppointment: () -> Unit = { navController.navigate(Route.BookAppointment.path) }
+    val goMyAppointments: () -> Unit = { navController.navigate(Route.MyAppointments.path) }
+    val goProfile: () -> Unit = { navController.navigate(Route.Profile.path) }
 
-    ModalNavigationDrawer( // Capa superior con drawer lateral
-        drawerState = drawerState, // Estado del drawer
-        drawerContent = { // Contenido del drawer (menú)
-            AppDrawer( // Nuestro componente Drawer
-                currentRoute = null, // Puedes pasar navController.currentBackStackEntry?.destination?.route
-                items = defaultDrawerItems( // Lista estándar
-                    onHome = {
-                        scope.launch { drawerState.close() } // Cierra drawer
-                        goHome() // Navega a Home
-                    },
-                    onLogin = {
-                        scope.launch { drawerState.close() } // Cierra drawer
-                        goLogin() // Navega a Login
-                    },
-                    onRegister = {
-                        scope.launch { drawerState.close() } // Cierra drawer
-                        goRegister() // Navega a Registro
-                    }
-                )
+    // Helper para cerrar sesión y volver al home
+    val handleLogout: () -> Unit = {
+        scope.launch { drawerState.close() }
+        onLogout()
+        navController.navigate(Route.Home.path) {
+            // Limpiar el backstack para evitar volver a pantallas autenticadas
+            popUpTo(Route.Home.path) { inclusive = true }
+        }
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            AppDrawer(
+                currentRoute = navController.currentBackStackEntry?.destination?.route,
+                // Mostrar ítems diferentes según si está autenticado o no
+                items = if (isAuthenticated) {
+                    authenticatedDrawerItems(
+                        userName = currentUserName ?: "Usuario",
+                        onServices = {
+                            scope.launch { drawerState.close() }
+                            goServices()
+                        },
+                        onBookAppointment = {
+                            scope.launch { drawerState.close() }
+                            goBookAppointment()
+                        },
+                        onMyAppointments = {
+                            scope.launch { drawerState.close() }
+                            goMyAppointments()
+                        },
+                        onProfile = {
+                            scope.launch { drawerState.close() }
+                            goProfile()
+                        },
+                        onLogout = handleLogout
+                    )
+                } else {
+                    defaultDrawerItems(
+                        onHome = {
+                            scope.launch { drawerState.close() }
+                            goHome()
+                        },
+                        onLogin = {
+                            scope.launch { drawerState.close() }
+                            goLogin()
+                        },
+                        onRegister = {
+                            scope.launch { drawerState.close() }
+                            goRegister()
+                        }
+                    )
+                }
             )
         }
     ) {
-        Scaffold( // Estructura base de pantalla
-            topBar = { // Barra superior con íconos/menú
+        Scaffold(
+            topBar = {
                 AppTopBar(
-                    onOpenDrawer = { scope.launch { drawerState.open() } }, // Abre drawer
-                    onHome = goHome,     // Botón Home
-                    onLogin = goLogin,   // Botón Login
-                    onRegister = goRegister // Botón Registro
+                    isAuthenticated = isAuthenticated,
+                    userName = currentUserName,
+                    onOpenDrawer = { scope.launch { drawerState.open() } },
+                    onHome = goHome,
+                    onLogin = goLogin,
+                    onRegister = goRegister,
+                    onServices = goServices,
+                    onBookAppointment = goBookAppointment,
+                    onMyAppointments = goMyAppointments,
+                    onProfile = goProfile,
+                    onLogout = handleLogout
                 )
             }
-        ) { innerPadding -> // Padding que evita solapar contenido
-            NavHost( // Contenedor de destinos navegables
-                navController = navController, // Controlador
-                startDestination = Route.Home.path, // Inicio: Home
-                modifier = Modifier.padding(innerPadding) // Respeta topBar
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = Route.Home.path,
+                modifier = Modifier.padding(innerPadding)
             ) {
-                composable(Route.Home.path) { // Destino Home
+                // ---- RUTAS PÚBLICAS ----
+
+                composable(Route.Home.path) {
                     HomeScreen(
-                        onGoLogin = goLogin,     // Botón para ir a Login
-                        onGoRegister = goRegister // Botón para ir a Registro
+                        isAuthenticated = isAuthenticated,
+                        onGoLogin = goLogin,
+                        onGoRegister = goRegister,
+                        onGoServices = goServices
                     )
                 }
-                composable(Route.Login.path) { // Destino Login
-                    //1 modificamos el acceso a la pagina
-                    // Usamos la versión con ViewModel (LoginScreenVm) para formularios/validación en tiempo real
+
+                composable(Route.Login.path) {
                     LoginScreenVm(
-                        vm = authViewModel,            // <-- NUEVO: pasamos VM inyectado
-                        onLoginOkNavigateHome = goHome,            // Si el VM marca success=true, navegamos a Home
-                        onGoRegister = goRegister                  // Enlace para ir a la pantalla de Registro
+                        vm = authViewModel,
+                        onLoginOkNavigateHome = {
+                            // Después del login exitoso, ir a servicios
+                            navController.navigate(Route.Services.path) {
+                                popUpTo(Route.Home.path) { inclusive = false }
+                            }
+                        },
+                        onGoRegister = goRegister
                     )
                 }
-                composable(Route.Register.path) { // Destino Registro
-                    //2 modificamos el acceso a la pagina
-                    // Usamos la versión con ViewModel (RegisterScreenVm) para formularios/validación en tiempo real
+
+                composable(Route.Register.path) {
                     RegisterScreenVm(
-                        vm = authViewModel,            // <-- NUEVO: pasamos VM inyectado
-                        onRegisteredNavigateLogin = goLogin,       // Si el VM marca success=true, volvemos a Login
-                        onGoLogin = goLogin                        // Botón alternativo para ir a Login
+                        vm = authViewModel,
+                        onRegisteredNavigateLogin = goLogin,
+                        onGoLogin = goLogin
                     )
+                }
+
+                // ---- RUTAS PRIVADAS (requieren autenticación) ----
+
+                composable(Route.Services.path) {
+                    // Si no está autenticado, redirigir a login
+                    if (!isAuthenticated) {
+                        navController.navigate(Route.Login.path)
+                    } else {
+                        ServicesScreen(
+                            vm = servicesViewModel,
+                            onBookService = { serviceId ->
+                                // Navegar a agendar con el servicio preseleccionado
+                                goBookAppointment()
+                            }
+                        )
+                    }
+                }
+
+                composable(Route.BookAppointment.path) {
+                    if (!isAuthenticated) {
+                        navController.navigate(Route.Login.path)
+                    } else {
+                        BookAppointmentScreen(
+                            appointmentVm = appointmentViewModel,
+                            servicesVm = servicesViewModel,
+                            onAppointmentBooked = {
+                                // Navegar a "Mis Citas" después de agendar
+                                navController.navigate(Route.MyAppointments.path) {
+                                    popUpTo(Route.BookAppointment.path) { inclusive = true }
+                                }
+                            }
+                        )
+                    }
+                }
+
+                composable(Route.MyAppointments.path) {
+                    if (!isAuthenticated) {
+                        navController.navigate(Route.Login.path)
+                    } else {
+                        MyAppointmentsScreen(
+                            vm = appointmentViewModel,
+                            onBookNewAppointment = goBookAppointment
+                        )
+                    }
+                }
+
+                composable(Route.Profile.path) {
+                    if (!isAuthenticated) {
+                        navController.navigate(Route.Login.path)
+                    } else {
+                        ProfileScreen(
+                            userId = currentUserId!!,
+                            userName = currentUserName ?: "Usuario",
+                            onLogout = handleLogout
+                        )
+                    }
                 }
             }
         }

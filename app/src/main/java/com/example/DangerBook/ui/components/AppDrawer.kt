@@ -1,55 +1,128 @@
 package com.example.DangerBook.ui.components
 
-import androidx.compose.material.icons.Icons // Íconos Material
-import androidx.compose.material.icons.filled.Home // Ícono Home
-import androidx.compose.material.icons.filled.AccountCircle // Ícono Login
-import androidx.compose.material.icons.filled.Person // Ícono Registro
-import androidx.compose.material3.Icon // Ícono en ítem del drawer
-import androidx.compose.material3.NavigationDrawerItem // Ítem seleccionable
-import androidx.compose.material3.NavigationDrawerItemDefaults // Defaults de estilo
-import androidx.compose.material3.Text // Texto
-import androidx.compose.material3.ModalDrawerSheet // Contenedor de contenido del drawer
-import androidx.compose.runtime.Composable // Marcador composable
-import androidx.compose.ui.Modifier // Modificador
-import androidx.compose.ui.graphics.vector.ImageVector // Tipo de ícono
-// Pequeña data class para representar cada opción del drawer
-data class DrawerItem( // Estructura de un ítem de menú lateral
-    val label: String, // Texto a mostrar
-    val icon: ImageVector, // Ícono del ítem
-    val onClick: () -> Unit // Acción al hacer click
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.Text
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+
+// Estructura de un ítem del drawer
+data class DrawerItem(
+    val label: String,
+    val icon: ImageVector,
+    val onClick: () -> Unit
 )
 
-@Composable // Componente Drawer para usar en ModalNavigationDrawer
+@Composable
 fun AppDrawer(
-    currentRoute: String?, // Ruta actual (para marcar seleccionado si quieres)
-    items: List<DrawerItem>, // Lista de ítems a mostrar
-    modifier: Modifier = Modifier // Modificador opcional
+    currentRoute: String?,
+    items: List<DrawerItem>,
+    modifier: Modifier = Modifier
 ) {
-    ModalDrawerSheet( // Hoja que contiene el contenido del drawer
-        modifier = modifier // Modificador encadenable
+    ModalDrawerSheet(
+        modifier = modifier
     ) {
-        // Recorremos las opciones y pintamos ítems
-        items.forEach { item -> // Por cada ítem
-            NavigationDrawerItem( // Ítem con estados Material
-                label = { Text(item.label) }, // Texto visible
-                selected = false, // Puedes usar currentRoute == ... si quieres marcar
-                onClick = item.onClick, // Acción al pulsar
-                icon = { Icon(item.icon, contentDescription = item.label) }, // Ícono
-                modifier = Modifier, // Sin mods extra
-                colors = NavigationDrawerItemDefaults.colors() // Estilo por defecto
+        // Header del drawer con branding de DangerBook
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.primary)
+                .padding(24.dp)
+        ) {
+            Column {
+                Text(
+                    text = "DangerBook",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+                Text(
+                    text = "Studio Danger",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                )
+            }
+        }
+
+        Divider()
+        Spacer(Modifier.height(8.dp))
+
+        // Ítems del menú
+        items.forEach { item ->
+            NavigationDrawerItem(
+                label = { Text(item.label) },
+                selected = false, // Puedes implementar lógica para marcar la ruta actual
+                onClick = item.onClick,
+                icon = { Icon(item.icon, contentDescription = item.label) },
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                colors = NavigationDrawerItemDefaults.colors()
             )
         }
     }
 }
 
-// Helper para construir la lista estándar de ítems del drawer
+// Helper: Ítems para usuarios NO autenticados
 @Composable
 fun defaultDrawerItems(
-    onHome: () -> Unit,   // Acción Home
-    onLogin: () -> Unit,  // Acción Login
-    onRegister: () -> Unit // Acción Registro
+    onHome: () -> Unit,
+    onLogin: () -> Unit,
+    onRegister: () -> Unit
 ): List<DrawerItem> = listOf(
-    DrawerItem("Home", Icons.Filled.Home, onHome),          // Ítem Home
-    DrawerItem("Login", Icons.Filled.AccountCircle, onLogin),       // Ítem Login
-    DrawerItem("Registro", Icons.Filled.Person, onRegister) // Ítem Registro
+    DrawerItem("Home", Icons.Filled.Home, onHome),
+    DrawerItem("Iniciar Sesión", Icons.Filled.AccountCircle, onLogin),
+    DrawerItem("Registrarse", Icons.Filled.Person, onRegister)
 )
+
+// Helper: Ítems para usuarios AUTENTICADOS
+@Composable
+fun authenticatedDrawerItems(
+    userName: String,
+    userRole: String, // NUEVO: rol del usuario
+    onServices: () -> Unit,
+    onBookAppointment: () -> Unit,
+    onMyAppointments: () -> Unit,
+    onBarberAppointments: () -> Unit, // NUEVO
+    onAdminDashboard: () -> Unit, // NUEVO
+    onProfile: () -> Unit,
+    onLogout: () -> Unit
+): List<DrawerItem> {
+    val commonItems = mutableListOf(
+        DrawerItem("Servicios", Icons.Filled.ContentCut, onServices),
+        DrawerItem("Perfil", Icons.Filled.AccountCircle, onProfile)
+    )
+
+    // Ítems específicos según rol
+    when (userRole) {
+        "admin" -> {
+            commonItems.add(0, DrawerItem("Panel Admin", Icons.Filled.AdminPanelSettings, onAdminDashboard))
+            commonItems.add(DrawerItem("Gestionar Citas", Icons.Filled.EventNote, onMyAppointments))
+        }
+        "barber" -> {
+            commonItems.add(DrawerItem("Mis Citas Asignadas", Icons.Filled.Event, onBarberAppointments))
+        }
+        else -> { // "user"
+            commonItems.add(DrawerItem("Agendar Cita", Icons.Filled.EventAvailable, onBookAppointment))
+            commonItems.add(DrawerItem("Mis Citas", Icons.Filled.Event, onMyAppointments))
+        }
+    }
+
+    commonItems.add(DrawerItem("Cerrar Sesión", Icons.Filled.Logout, onLogout))
+
+    return commonItems
+}

@@ -1,77 +1,164 @@
 package com.example.DangerBook
 
+import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.rememberNavController
 import com.example.DangerBook.data.local.database.AppDatabase
+import com.example.DangerBook.data.local.notifications.NotificationHelper
+import com.example.DangerBook.data.local.storage.UserPreferences
 import com.example.DangerBook.data.repository.UserRepository
+import com.example.DangerBook.data.repository.ServiceRepository
+import com.example.DangerBook.data.repository.AppointmentRepository
 import com.example.DangerBook.navigation.AppNavGraph
 import com.example.DangerBook.ui.viewmodel.AuthViewModel
 import com.example.DangerBook.ui.viewmodel.AuthViewModelFactory
+import com.example.DangerBook.ui.viewmodel.ServicesViewModel
+import com.example.DangerBook.ui.viewmodel.ServicesViewModelFactory
+import com.example.DangerBook.ui.viewmodel.AppointmentViewModel
+import com.example.DangerBook.ui.viewmodel.AppointmentViewModelFactory
+import com.example.DangerBook.ui.theme.UINavegacionTheme
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+    // Launcher para solicitar permiso de notificaciones
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // Permiso concedido
+        } else {
+            // Permiso denegado (la app seguirá funcionando sin notificaciones)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Crear canal de notificaciones
+        NotificationHelper.createNotificationChannel(this)
+
+        // Solicitar permiso de notificaciones en Android 13+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
         setContent {
-            AppRoot()
+            UINavegacionTheme {
+                AppRoot()
+            }
         }
     }
 }
 
-
-/*
-* En Compose, Surface es un contenedor visual que viene de Material 3.Crea un bloque
-*  que puedes personalizar con color, forma, sombra (elevación).
-Sirve para aplicar un fondo (color, borde, elevación, forma) siguiendo las guías de diseño
-* de Material.
-Piensa en él como una “lona base” sobre la cual vas a pintar tu UI.
-* Si cambias el tema a dark mode, colorScheme.background
-* cambia automáticamente y el Surface pinta la pantalla con el nuevo color.
-* */
-@Composable // Indica que esta función dibuja UI
-fun AppRoot() { // Raíz de la app para separar responsabilidades (se conserva)
-    // ====== NUEVO: construcción de dependencias (Composition Root) ======
+@Composable
+fun AppRoot() {
     val context = LocalContext.current.applicationContext
-    // ^ Obtenemos el applicationContext para construir la base de datos de Room.
+    val navController = rememberNavController()
+    val scope = rememberCoroutineScope()
 
+    // DataStore para persistencia de sesión
+    val userPrefs = remember { UserPreferences(context) }
+
+    // Inicializar base de datos y DAOs
     val db = AppDatabase.getInstance(context)
-    // ^ Singleton de Room. No crea múltiples instancias.
-
     val userDao = db.userDao()
-    // ^ Obtenemos el DAO de usuarios desde la DB.
+    val serviceDao = db.serviceDao()
+    val barberDao = db.barberDao()
+    val appointmentDao = db.appointmentDao()
 
+    // Inicializar repositorios
     val userRepository = UserRepository(userDao)
-    // ^ Repositorio que encapsula la lógica de login/registro contra Room.
+    val serviceRepository = ServiceRepository(serviceDao, barberDao)
+    val appointmentRepository = AppointmentRepository(appointmentDao, context)
 
+    // Estado de autenticación desde DataStore
+    val isLoggedIn by userPrefs.isLoggedIn.collectAsStateWithLifecycle(false)
+    val currentUserId by userPrefs.userId.collectAsStateWithLifecycle(null)
+    val currentUserName by userPrefs.userName.collectAsStateWithLifecycle(null)
+    val currentUserRole by userPrefs.userRole.collectAsStateWithLifecycle(null)
+    val currentUserPhoto by userPrefs.userPhoto.collectAsStateWithLifecycle(null)
+
+    // Lista de barberos (UserEntity con role = "barber")
+    val barbers by userRepository.getAllBarbers().collectAsStateWithLifecycle(emptyList())
+
+    // Crear AuthViewModel
     val authViewModel: AuthViewModel = viewModel(
         factory = AuthViewModelFactory(userRepository)
     )
-    // ^ Creamos el ViewModel con factory para inyectar el repositorio.
-    //   Esto reemplaza cualquier uso anterior de listas en memoria (USERS).
 
-    // ====== TU NAVEGACIÓN ORIGINAL ======
-    val navController = rememberNavController() // Controlador de navegación (igual que antes)
-    MaterialTheme { // Provee colores/tipografías Material 3 (igual que antes)
-        Surface(color = MaterialTheme.colorScheme.background) { // Fondo general (igual que antes)
-
-            // ====== MOD: pasamos el AuthViewModel a tu NavGraph ======
-            // Si tu AppNavGraph ya recibía el VM o lo creaba adentro, lo mejor ahora es PASARLO
-            // para que toda la app use la MISMA instancia que acabamos de inyectar.
-            AppNavGraph(
-                navController = navController,
-                authViewModel = authViewModel // <-- NUEVO parámetro
-            )
-            // NOTA: Si tu AppNavGraph no tiene este parámetro aún, basta con agregarlo:
-            // fun AppNavGraph(navController: NavHostController, authViewModel: AuthViewModel) { ... }
-            // y luego pasar ese authViewModel a las pantallas Login/Register donde se use.
+    // Observar el estado de login para guardar sesión en DataStore
+    LaunchedEffect(Unit) {
+        scope.launch {
+            authViewModel.login.collectLatest { loginState ->
+                if (loginState.success && loginState.loggedUser != null) {
+                    val user = loginState.loggedUser
+                    userPrefs.saveUserSession(
+                        userId = user.id,
+                        userName = user.name,
+                        userEmail = user.email,
+                        userRole = user.role,
+                        userPhoto = user.photoUri
+                    )
+                }
+            }
         }
+    }
+
+    // Crear ServicesViewModel
+    val servicesViewModel: ServicesViewModel = viewModel(
+        factory = ServicesViewModelFactory(serviceRepository)
+    )
+
+    // Crear AppointmentViewModel solo si hay usuario logueado
+    val appointmentViewModel: AppointmentViewModel = viewModel(
+        factory = AppointmentViewModelFactory(
+            appointmentRepository,
+            currentUserId ?: -1L
+        )
+    )
+
+    // Callback para cerrar sesión
+    val handleLogout: () -> Unit = {
+        scope.launch {
+            userPrefs.clearSession()
+        }
+    }
+
+    // Callback para actualizar foto de perfil
+    val handlePhotoUpdated: (String) -> Unit = { photoUri ->
+        scope.launch {
+            currentUserId?.let { userId ->
+                userRepository.updateUserPhoto(userId, photoUri)
+            }
+        }
+    }
+
+    Surface(color = MaterialTheme.colorScheme.background) {
+        AppNavGraph(
+            navController = navController,
+            authViewModel = authViewModel,
+            servicesViewModel = servicesViewModel,
+            appointmentViewModel = appointmentViewModel,
+            currentUserId = currentUserId,
+            currentUserName = currentUserName,
+            currentUserRole = currentUserRole,
+            currentUserPhoto = currentUserPhoto,
+            barbers = barbers,
+            onLogout = handleLogout,
+            onPhotoUpdated = handlePhotoUpdated
+        )
     }
 }

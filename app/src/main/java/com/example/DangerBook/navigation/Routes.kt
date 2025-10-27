@@ -1,14 +1,36 @@
 package com.example.DangerBook.navigation
 
 // Clase sellada para rutas: evita "strings mágicos" y facilita refactors
-sealed class Route(val path: String) { // Cada objeto representa una pantalla
-    data object Home     : Route("home")     // Ruta Home
-    data object Login    : Route("login")    // Ruta Login
-    data object Register : Route("register") // Ruta Registro
+sealed class Route(val path: String) {
+    // Rutas públicas (sin autenticación)
+    data object Home : Route("home")
+    data object Login : Route("login")
+    data object Register : Route("register")
+
+    // Rutas privadas (requieren autenticación)
+    data object Services : Route("services") // Pantalla de servicios disponibles
+    data object BookAppointment : Route("book_appointment") // Agendar nueva cita
+    data object MyAppointments : Route("my_appointments") // Ver mis citas
+    data object Profile : Route("profile") // Perfil del usuario
+
+    // Rutas para barberos (solo role = "barber")
+    data object BarberAppointments : Route("barber_appointments") // Citas asignadas al barbero
+
+    // Rutas para administradores (solo role = "admin")
+    data object AdminDashboard : Route("admin_dashboard") // Panel de administración
 }
 
 /*
-* “Strings mágicos” se refiere a cuando pones un texto duro y repetido en varias partes del código,
-* Si mañana cambias "home" por "inicio", tendrías que buscar todas las ocurrencias de "home" a mano.
-* Eso es frágil y propenso a errores.
-La idea es: mejor centralizar esos strings en una sola clase (Route), y usarlos desde ahí.*/
+ * Estructura de navegación de DangerBook:
+ *
+ * PÚBLICAS (cualquiera puede acceder):
+ * - Home: Página de bienvenida
+ * - Login: Iniciar sesión
+ * - Register: Crear cuenta
+ *
+ * PRIVADAS (requiere login):
+ * - Services: Ver servicios de la barbería
+ * - BookAppointment: Agendar una cita
+ * - MyAppointments: Ver/cancelar mis citas
+ * - Profile: Ver/editar perfil
+ */

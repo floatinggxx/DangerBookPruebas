@@ -1,37 +1,83 @@
 package com.example.DangerBook.data.repository
 
-import com.example.DangerBook.data.local.user.UserDao       // DAO de usuario
-import com.example.DangerBook.data.local.user.UserEntity    // Entidad de usuario
+import com.example.uinavegacion.data.local.user.UserDao
+import com.example.uinavegacion.data.local.user.UserEntity
+import kotlinx.coroutines.flow.Flow
 
-// Repositorio: orquesta reglas de negocio para login/registro sobre el DAO.
+// Repositorio para manejar la lógica de negocio de usuarios
 class UserRepository(
-    private val userDao: UserDao // Inyección del DAO
+    private val userDao: UserDao
 ) {
 
-    // Login: busca por email y valida contraseña
+    // Login: validar credenciales
     suspend fun login(email: String, password: String): Result<UserEntity> {
-        val user = userDao.getByEmail(email)                         // Busca usuario
-        return if (user != null && user.password == password) {      // Verifica pass
-            Result.success(user)                                     // Éxito
+        val user = userDao.getByEmail(email)
+        return if (user != null && user.password == password) {
+            Result.success(user)
         } else {
-            Result.failure(IllegalArgumentException("Credenciales inválidas")) // Error
+            Result.failure(IllegalArgumentException("Credenciales Inválidas"))
         }
     }
 
-    // Registro: valida no duplicado y crea nuevo usuario (con teléfono)
-    suspend fun register(name: String, email: String, phone: String, password: String): Result<Long> {
-        val exists = userDao.getByEmail(email) != null               // ¿Correo ya usado?
+    // Registro: crear nuevo usuario
+    suspend fun register(
+        name: String,
+        email: String,
+        phone: String,
+        pass: String,
+        role: String = "user", // Por defecto es cliente
+        photoUri: String? = null
+    ): Result<Long> {
+        val exists = userDao.getByEmail(email) != null
         if (exists) {
-            return Result.failure(IllegalStateException("El correo ya está registrado"))
+            return Result.failure(IllegalArgumentException("Correo ya registrado"))
         }
-        val id = userDao.insert(                                     // Inserta nuevo
+
+        val id = userDao.insert(
             UserEntity(
                 name = name,
                 email = email,
-                phone = phone,                                       // Teléfono incluido
-                password = password
+                phone = phone,
+                password = pass,
+                role = role,
+                photoUri = photoUri
             )
         )
-        return Result.success(id)                                    // Devuelve ID generado
+        return Result.success(id)
+    }
+
+    // Obtener usuario por ID
+    suspend fun getUserById(userId: Long): UserEntity? {
+        return userDao.getById(userId)
+    }
+
+    // Actualizar usuario completo
+    suspend fun updateUser(user: UserEntity): Result<Unit> {
+        return try {
+            userDao.update(user)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Actualizar solo la foto de perfil
+    suspend fun updateUserPhoto(userId: Long, photoUri: String?): Result<Unit> {
+        return try {
+            userDao.updatePhoto(userId, photoUri)
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Obtener todos los barberos (Flow para observar cambios)
+    fun getAllBarbers(): Flow<List<UserEntity>> {
+        return userDao.getAllBarbers()
+    }
+
+    // Obtener usuarios por rol
+    fun getUsersByRole(role: String): Flow<List<UserEntity>> {
+        return userDao.getUsersByRole(role)
     }
 }
