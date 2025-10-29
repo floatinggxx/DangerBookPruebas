@@ -7,9 +7,40 @@ import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
+// Data class para mostrar los detalles de una cita en la UI de forma segura
+data class AppointmentDetails(
+    val appointmentId: Long,
+    val dateTime: Long,
+    val status: String,
+    val serviceName: String,
+    val barberName: String?, // Es nulable por si el barbero fue borrado o no se asignó uno
+    val clientName: String
+)
+
 // DAO para operaciones de citas en la base de datos
 @Dao
 interface AppointmentDao {
+
+    // --- Nueva consulta para obtener detalles de citas de forma segura ---
+    @Query("""
+        SELECT
+            a.id as appointmentId,
+            a.dateTime,
+            a.status,
+            s.name as serviceName,
+            b.name as barberName,
+            u.name as clientName
+        FROM appointments AS a
+        JOIN services AS s ON a.serviceId = s.id
+        JOIN users AS u ON a.userId = u.id
+        LEFT JOIN barbers AS b ON a.barberId = b.id
+        WHERE a.userId = :userId
+        ORDER BY a.dateTime DESC
+    """)
+    fun getAppointmentDetailsForUser(userId: Long): Flow<List<AppointmentDetails>>
+
+
+    // --- Queries existentes (las mantenemos por si se usan en otras partes) ---
 
     // Insertar una nueva cita
     @Insert(onConflict = OnConflictStrategy.ABORT)
